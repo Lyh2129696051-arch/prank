@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>System Scan / 系统扫描</title>
+    <style>
+        * {margin:0;padding:0;box-sizing:border-box;}
+        body{background:#111;color:#0f0;font-family:Consolas, "Microsoft YaHei";overflow:hidden;}
+        .normal-box{padding:30px;font-size:18px;line-height:2;}
+
+        /* 进度条容器 */
+        .progress-wrap {
+            width: 100%;
+            height: 24px;
+            background: #333;
+            border: 1px solid #0f0;
+            margin: 15px 0;
+            border-radius: 2px;
+        }
+        /* 进度条填充 */
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #0f0;
+            transition: none;
+        }
+
+        /* 极速红黑闪烁 */
+        .scare{
+            display:none;
+            position:fixed;
+            top:0;left:0;
+            width:100vw;height:100vh;
+            background:#000;
+            z-index:99999;
+            animation: flashRed 0.1s infinite alternate;
+        }
+
+        @keyframes flashRed {
+            0% { background-color: #000; }
+            100% { background-color: #ff0000; }
+        }
+
+        /* 放缓抖动、减小幅度，画面清晰 */
+        @keyframes shake {
+            0%,100% { transform: translate(0,0); }
+            25% { transform: translate(-4px,4px); }
+            50% { transform: translate(-4px,-4px); }
+            75% { transform: translate(4px,4px); }
+        }
+        .shake-body{
+            animation: shake 0.4s infinite;
+        }
+
+        .pop{
+            position:absolute;
+            padding:20px;
+            background:#fff;
+            color:#000;
+            border:2px solid red;
+            box-shadow:0 0 20px red;
+        }
+        button{
+            margin-top:10px;padding:6px 16px;cursor:pointer;
+        }
+        /* 强光遮罩 */
+        .bright-mask{
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            background:#fff;opacity:0.2;z-index:99998;pointer-events:none;
+        }
+        /* 终极闪屏 */
+        .final-flash{
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            background:#ffffff;z-index:100000;display:none;
+        }
+    </style>
+</head>
+<body>
+    <div class="normal-box">
+        <h2>Computer Security Scan V9.2 | 电脑安全扫描程序 V9.2</h2>
+        <p>Scanning for vulnerabilities... | 正在扫描磁盘漏洞、木马程序...</p>
+        <!-- 可视化进度条 -->
+        <div class="progress-wrap">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <p id="scanText">Scan Progress: 0% | 扫描进度：0%</p>
+    </div>
+
+    <div class="scare" id="scareLayer"></div>
+    <div class="final-flash" id="finalFlash"></div>
+    <audio id="scareAudio" loop>
+        <source src="scare.wav" type="audio/wav">
+    
+
+    <script>
+        // 禁止右键、F5、ESC、F11
+        document.oncontextmenu = ()=>false;
+        document.onkeydown = (e) => {
+            if(e.key === 'F5' || e.key === 'Escape' || e.key === 'F11'){
+                return false;
+            }
+        };
+
+        let scanNum = 0;
+        const scanText = document.getElementById('scanText');
+        const progressBar = document.getElementById('progressBar');
+        const audio = document.getElementById('scareAudio');
+        const scareLayer = document.getElementById('scareLayer');
+        const finalFlash = document.getElementById('finalFlash');
+
+        // 音频双倍增益
+        audio.volume = 1.0;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const gain = ctx.createGain();
+        gain.gain.value = 2.0;
+        const src = ctx.createMediaElementSource(audio);
+        src.connect(gain);
+        gain.connect(ctx.destination);
+
+        // 强光遮罩
+        function maxBrightness() {
+            const bright = document.createElement('div');
+            bright.className = 'bright-mask';
+            document.body.appendChild(bright);
+        }
+
+        // 扫描进度 + 同步更新进度条
+        const scanTimer = setInterval(()=>{
+            scanNum += Math.floor(Math.random()*5);
+            if(scanNum>=100) scanNum=100;
+            // 更新文字进度
+            scanText.innerText = `Scan Progress: ${scanNum}% | 扫描进度：${scanNum}%`;
+            // 更新可视化进度条宽度
+            progressBar.style.width = scanNum + '%';
+
+            if(scanNum === 100){
+                clearInterval(scanTimer);
+                startScare();
+            }
+        },300);
+
+        function startScare(){
+            scareLayer.style.display = 'block';
+            maxBrightness();
+
+            // 进度100% 同步：自动全屏 + 开启抖动
+            document.documentElement.requestFullscreen().catch(err => {});
+            document.body.classList.add('shake-body');
+
+            audio.currentTime = 0;
+            audio.play().catch(()=>{
+                document.body.onclick = ()=>{
+                    audio.play();
+                    document.body.onclick=null;
+                }
+            });
+
+            let popCount = 0;
+            const totalPop = 25;
+            function createPop(){
+                popCount++;
+                const div = document.createElement('div');
+                div.className = 'pop';
+                const w = 220 + Math.random() * 80;
+                div.style.width = w + 'px';
+                div.style.left = Math.random()*70+'%';
+                div.style.top = Math.random()*70+'%';
+
+                if(popCount < totalPop){
+                    div.innerHTML = `
+                        <h3>WARNING: Virus Detected!</h3>
+                        <h3>警告：高危病毒入侵！</h3>
+                        <p>System files damaged! Please repair immediately</p>
+                        <p>系统文件已损坏，请立即修复</p>
+                        <button onclick="this.parentElement.remove()">Close / 关闭</button>
+                    `;
+                }else{
+                    // 最后一个双语提醒弹窗出现，停止抖动
+                    document.body.classList.remove('shake-body');
+                    div.innerHTML = `
+                        <h3>PRANK COMPLETE!</h3>
+                        <h3>恶作剧结束！</h3>
+                        <p>Do NOT click unknown links randomly!</p>
+                        <p>不要随意点击来路不明的链接！</p>
+                        <button onclick="endAll()">Stop / 结束</button>
+                    `;
+                    // 收尾爆闪
+                    setTimeout(()=>{
+                        finalFlash.style.display = 'block';
+                        setTimeout(()=>{
+                            finalFlash.style.display = 'none';
+                        }, 200);
+                    }, 300);
+                }
+                scareLayer.appendChild(div);
+                if(popCount < totalPop) setTimeout(createPop, 350);
+            }
+            setTimeout(createPop, 200);
+        }
+
+        function endAll(){
+            scareLayer.style.display = 'none';
+            audio.pause();
+            // 退出全屏
+            document.exitFullscreen().catch(err => {});
+            // 双语安全提示
+            alert("Reminder:\nNever open unfamiliar links from others.\n\n温馨提醒：\n请勿随意点开他人发来的未知链接！");
+        }
+    </script>
+</body>
+</html>
